@@ -1,10 +1,16 @@
 import { GeoJsonObject } from 'geojson';
 import { Location } from './location';
 
+/** How many suggestions to ask the place autocomplete endpoint for. */
+const placeSearchResultLimit = 9;
+
 export const iNaturalistApi = {
-  apiV1Fetch: async <T>(urlPath: string): Promise<T> => {
+  apiV1Fetch: async <T>(urlPath: string, signal?: AbortSignal): Promise<T> => {
     const url = 'https://api.inaturalist.org' + urlPath;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal });
+    if (!response.ok) {
+      throw new Error(`iNaturalist request failed (${response.status}): ${urlPath}`);
+    }
     const json = await response.json();
     return json.results as T;
   },
@@ -16,6 +22,17 @@ export const iNaturalistApi = {
         `&nelng=${location.longitude}` +
         `&swlat=${location.latitude}` +
         `&swlng=${location.longitude}`,
+    );
+  },
+
+  // Matches places by name, for searching somewhere other than where the user is.
+  // Pass an `AbortSignal` to drop a request whose query is already out of date.
+  fetchPlacesAutocomplete: async (query: string, signal?: AbortSignal) => {
+    return iNaturalistApi.apiV1Fetch<Place[]>(
+      '/v1/places/autocomplete' +
+        `?q=${encodeURIComponent(query)}` +
+        `&per_page=${placeSearchResultLimit}`,
+      signal,
     );
   },
 
@@ -69,7 +86,7 @@ export interface Place {
   bbox_area: number;
   bounding_box_geojson: { coordinates: unknown[] };
   display_name: string;
-  geometry_geojson: GeoJsonObject;
+  geometry_geojson?: GeoJsonObject;
   id: number;
   location: string;
   name: string;
