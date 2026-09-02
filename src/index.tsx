@@ -1,7 +1,11 @@
 import * as React from 'react';
 import App from './components/App';
-import * as ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 const rootEl = document.getElementById('root');
 
-ReactDOM.render(<App />, rootEl);
+if (!rootEl) {
+  throw new Error('Could not find root element to mount the app');
+}
+
+createRoot(rootEl).render(<App />);

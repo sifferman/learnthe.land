@@ -23,7 +23,7 @@ const OFFLINE_MODE = false;
 const App = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  let inner: JSX.Element;
+  let inner: React.JSX.Element;
 
   if (!state.location) {
     inner = (

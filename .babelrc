@@ -1,11 +1,19 @@
 {
   "presets": [
     "@babel/preset-env",
-    "@babel/preset-react",
-    "@babel/preset-typescript"
+    ["@babel/preset-typescript", { "onlyRemoveTypeImports": false }]
   ],
   "plugins": [
-    "@babel/plugin-transform-runtime",
+    "@babel/plugin-transform-runtime"
+  ],
+  "overrides": [
+    {
+      // Babel 8's preset-react enables the JSX parser for every file it is
+      // applied to, which makes generic arrow functions (`<T>(x: T[]) => ...`)
+      // in plain `.ts` files parse as JSX. Only apply it where JSX can appear.
+      "test": ["**/*.jsx", "**/*.tsx"],
+      "presets": ["@babel/preset-react"]
+    }
   ],
   "env": {
     "production": {
