@@ -14,12 +14,5 @@
       "test": ["**/*.jsx", "**/*.tsx"],
       "presets": ["@babel/preset-react"]
     }
-  ],
-  "env": {
-    "production": {
-      "presets": [
-        "minify"
-      ]
-    }
-  }
+  ]
 }
