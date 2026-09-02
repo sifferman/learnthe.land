@@ -6,7 +6,7 @@ import { fakeSpecies } from './inaturalist-fake-data';
 export const onSelectTaxaCategory = (
   place: Place,
   offlineMode: boolean,
-  dispatch: React.Dispatch<Action>
+  dispatch: React.Dispatch<Action>,
 ) => {
   return (selectedTaxaCategory: IconicTaxa) => {
     loadAllSpecies({

@@ -15,7 +15,7 @@ export const iNaturalistApi = {
         `?nelat=${location.latitude}` +
         `&nelng=${location.longitude}` +
         `&swlat=${location.latitude}` +
-        `&swlng=${location.longitude}`
+        `&swlng=${location.longitude}`,
     );
   },
 
@@ -28,7 +28,7 @@ export const iNaturalistApi = {
         '?captive=false' +
         '&quality_grade=research' +
         `&place_id=${place.id}` +
-        `&iconic_taxa=${iconicTaxa}`
+        `&iconic_taxa=${iconicTaxa}`,
     );
   },
 
@@ -40,7 +40,7 @@ export const iNaturalistApi = {
         '&quality_grade=research' +
         `&taxon_id=${taxonId}` +
         '&identifications=most_agree' +
-        '&per_page=10'
+        '&per_page=10',
       // '&order_by=votes';
     );
   },
@@ -141,7 +141,7 @@ export const iconicTaxa = [
   'Protozoa',
 ] as const;
 
-export type IconicTaxa = typeof iconicTaxa[number];
+export type IconicTaxa = (typeof iconicTaxa)[number];
 
 export const iconicTaxaDescription: Record<IconicTaxa, string | null> = {
   Actinopterygii: 'Ray-Finned Fishes',

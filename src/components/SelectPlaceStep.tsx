@@ -21,7 +21,6 @@ export const SelectPlaceStep = ({
           <MapContainer
             attributionControl={false}
             touchZoom={false}
-            tap={false}
             keyboard={false}
             boxZoom={false}
             doubleClickZoom={false}

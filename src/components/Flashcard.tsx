@@ -159,7 +159,7 @@ export const Flashcard = ({
   const [isMoving, setIsMoving] = useState<boolean>(false);
   const flickingRef = useRef<Flicking>(null);
 
-  let inner: JSX.Element;
+  let inner: React.JSX.Element;
   let speciesFacts;
 
   if (data.images.length === 0) {
@@ -253,7 +253,7 @@ export const Flashcard = ({
 
 const loadImageMetadata: (
   offlineMode: boolean,
-  species: SpeciesCount
+  species: SpeciesCount,
 ) => Promise<FlashcardImage[]> = (offlineMode, species) => {
   const originalPhotoUrl = species.taxon.default_photo.medium_url.replace('medium', 'original');
   const promises = [loadFlashcardImage(originalPhotoUrl, species.taxon.default_photo.attribution)];
@@ -267,7 +267,7 @@ const loadImageMetadata: (
 
 const loadFlashcardImage: (imageSrc: string, attribution: string) => Promise<FlashcardImage[]> = (
   imageSrc,
-  attribution
+  attribution,
 ) => {
   return new Promise((resolve) => {
     const image = new Image();
@@ -286,7 +286,7 @@ const loadFlashcardImage: (imageSrc: string, attribution: string) => Promise<Fla
 };
 
 const loadINaturalistObservationFlashcardImages: (
-  species: SpeciesCount
+  species: SpeciesCount,
 ) => Promise<FlashcardImage[]> = (species) => {
   return iNaturalistApi.fetchObservationsForTaxon(species.taxon.id).then((results) => {
     const extraImages: FlashcardImage[] = [];

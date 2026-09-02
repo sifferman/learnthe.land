@@ -27,7 +27,7 @@ export const LocationStep = ({
     },
     () => {
       <p>Could not fetch location</p>;
-    }
+    },
   );
   return loading;
 };
