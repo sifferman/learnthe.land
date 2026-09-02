@@ -49,6 +49,7 @@ const App = () => {
       <Container className="py-3">
         <SelectPlaceStep
           places={state.places}
+          offlineMode={OFFLINE_MODE}
           onSelectPlace={(place) => dispatch({ type: 'PLACE_SELECTED', place })}
         />
       </Container>
