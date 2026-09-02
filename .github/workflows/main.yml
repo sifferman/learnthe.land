@@ -1,25 +1,35 @@
-name: Run tests, build site
+name: CI
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build_site:
-    name: Run tests, build site
+    name: Lint, run tests, build site
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to push the built site to the gh-pages branch.
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - run: npm install
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
       - name: Run tests
-        run: npx jest
+        run: npx jest --config=configs/jest.json
       - name: Build site
         run: npm run build
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
