@@ -73,7 +73,10 @@ export const parseInaturalistSearchUrl = (enteredUrl: string): ParsedInaturalist
     value: {
       placeId,
       searchArea,
-      iconicTaxon: parseFirstSupportedIconicTaxon(url.searchParams.get('iconic_taxa')),
+      // A URL naming a taxon outright has already said which taxa it wants.
+      iconicTaxon: url.searchParams.has('taxon_id')
+        ? undefined
+        : parseFirstSupportedIconicTaxon(url.searchParams.get('iconic_taxa')),
       filters: parseSpeciesFilters(url.searchParams),
     },
   };

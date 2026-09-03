@@ -7,10 +7,10 @@ import { fakePlace } from '../src/inaturalist-fake-data';
 
 const requestedUrl = async (request: () => Promise<unknown>) => {
   const fetchedUrls: string[] = [];
-  global.fetch = ((url: string) => {
+  globalThis.fetch = ((url: string) => {
     fetchedUrls.push(url);
     return Promise.resolve({ ok: true, json: () => Promise.resolve({ results: [] }) });
-  }) as unknown as typeof global.fetch;
+  }) as unknown as typeof globalThis.fetch;
   await request();
   return fetchedUrls[0];
 };
@@ -37,8 +37,27 @@ it('asks iNaturalist for exactly what a pasted URL asked for', async () => {
   expect(url).toBe(
     'https://api.inaturalist.org/v1/observations/species_counts' +
       '?swlat=37.860625769&swlng=-119.480670108&nelat=37.988660981&nelng=-119.301671338' +
-      '&month=8,9,10&taxon_id=1',
+      '&taxon_id=1&month=8,9,10',
   );
+});
+
+// `iconic_taxa=Animalia` matches only the animals iNaturalist puts in no other
+// iconic group, which is a handful of species rather than the kingdom.
+it('turns a pasted iconic category into the taxon it stands for', async () => {
+  const parsed = parseInaturalistSearchUrl(`${animaliaUrl}&iconic_taxa=Animalia`);
+  if (!parsed.ok) {
+    throw new Error(parsed.reason);
+  }
+
+  const url = await requestedUrl(() =>
+    iNaturalistApi.fetchAllSpeciesForPlace(iconicTaxonOf(taxaScopeFor('Animalia')), fakePlace, {}),
+  );
+
+  expect(url).toContain('taxon_id=1');
+  expect(url).not.toContain('iconic_taxa');
+  // The pasted `taxon_id` wins, so the two can never disagree in one request.
+  expect(parsed.value.iconicTaxon).toBeUndefined();
+  expect(parsed.value.filters.taxon_id).toBe(1);
 });
 
 it('keeps asking for wild, identified observations when nothing was pasted', async () => {
@@ -48,6 +67,6 @@ it('keeps asking for wild, identified observations when nothing was pasted', asy
 
   expect(url).toBe(
     'https://api.inaturalist.org/v1/observations/species_counts' +
-      `?place_id=${fakePlace.id}&iconic_taxa=Aves&captive=false&quality_grade=research`,
+      `?place_id=${fakePlace.id}&taxon_id=3&captive=false&quality_grade=research`,
   );
 });

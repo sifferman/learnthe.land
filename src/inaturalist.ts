@@ -52,7 +52,11 @@ export const iNaturalistApi = {
       '/v1/observations/species_counts' +
         queryString({
           ...(place.searchArea ?? { place_id: place.id }),
-          iconic_taxa: iconicTaxon,
+          // Searching by taxon rather than by `iconic_taxa`: iNaturalist reads
+          // `iconic_taxa=Animalia` as only the animals that fall outside its
+          // other iconic groups, where the kingdom itself is what a category
+          // like "Animals" is meant to cover.
+          taxon_id: iconicTaxon && iconicTaxonIds[iconicTaxon],
           ...filters,
         }),
     );
@@ -246,9 +250,25 @@ export const iconicTaxa = [
 
 export type IconicTaxa = (typeof iconicTaxa)[number];
 
+export const iconicTaxonIds: Record<IconicTaxa, number> = {
+  Actinopterygii: 47178,
+  Animalia: 1,
+  Amphibia: 20978,
+  Arachnida: 47119,
+  Aves: 3,
+  Chromista: 48222,
+  Fungi: 47170,
+  Insecta: 47158,
+  Mammalia: 40151,
+  Mollusca: 47115,
+  Reptilia: 26036,
+  Plantae: 47126,
+  Protozoa: 47686,
+};
+
 export const iconicTaxaDescription: Record<IconicTaxa, string | null> = {
   Actinopterygii: 'Ray-Finned Fishes',
-  Animalia: 'Animals not in another category',
+  Animalia: 'Animals',
   Amphibia: 'Amphibians',
   Arachnida: 'Arachnids',
   Aves: 'Birds',
