@@ -42,7 +42,7 @@ export class FlashcardManager {
       2 ** flashcard.streak;
     this.inRotation.splice(indexToInsert, 0, flashcard);
 
-    if (shouldAddNewFlashcard(this.inRotation)) {
+    if (shouldAddNewFlashcard(this.inRotation, this.notInRotation)) {
       addNewFlashcard(this.inRotation, this.notInRotation);
     }
 
@@ -67,8 +67,14 @@ const addNewFlashcard = (
   flashcardsInRotation.splice(indexToInsert, 0, newFlashcard);
 };
 
-const shouldAddNewFlashcard = (flashcardsInRotation: FlashcardData[]): boolean => {
+const shouldAddNewFlashcard = (
+  flashcardsInRotation: FlashcardData[],
+  flashcardsNotInRotation: FlashcardData[],
+): boolean => {
   return (
+    // A place with fewer species than `initialFlashcardCount` leaves nothing
+    // waiting to be added, and adding from an empty list corrupts the rotation.
+    flashcardsNotInRotation.length > 0 &&
     allFlashcardsHaveBeenAttempted(flashcardsInRotation) &&
     doesntKnowFewerThanFiveFlashcards(flashcardsInRotation)
   );
