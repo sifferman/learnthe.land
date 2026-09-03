@@ -5,9 +5,6 @@ import { IconicTaxa } from './inaturalist';
 // nothing left to ask about.
 export type TaxaScope = { kind: 'allTaxa' } | { kind: 'iconicTaxon'; iconicTaxon: IconicTaxa };
 
-export const taxaScopeFor = (iconicTaxon?: IconicTaxa): TaxaScope =>
-  iconicTaxon ? { kind: 'iconicTaxon', iconicTaxon } : { kind: 'allTaxa' };
-
 export const iconicTaxonOf = (taxaScope: TaxaScope): IconicTaxa | undefined =>
   taxaScope.kind === 'iconicTaxon' ? taxaScope.iconicTaxon : undefined;
 

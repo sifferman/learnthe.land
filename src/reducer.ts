@@ -1,5 +1,4 @@
 import { State } from './state';
-import { taxaScopeFor } from './taxa-scope';
 import { Action } from './Action';
 import { Reducer } from 'react';
 import { FlashcardData } from './flashcard-data';
@@ -22,16 +21,16 @@ export const reducer: Reducer<State, Action> = (state: State, action: Action): S
       return {
         ...state,
         selectedPlace: action.place,
-        // The URL is replayed exactly as pasted: it decides the taxa and the
-        // filters, including which of the app's own defaults do not apply.
-        taxaScope: taxaScopeFor(action.iconicTaxon),
+        // The URL is replayed exactly as pasted, including which of the app's
+        // own defaults do not apply.
         speciesFilters: action.filters,
+        filtersFromPastedUrl: true,
       };
     }
-    case 'TAXA_CATEGORY_SELECTED': {
+    case 'TAXA_SCOPE_SELECTED': {
       return {
         ...state,
-        taxaScope: taxaScopeFor(action.taxaCategory),
+        taxaScope: action.taxaScope,
       };
     }
     case 'ALL_SPECIES_LOADED': {

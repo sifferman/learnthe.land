@@ -1,6 +1,7 @@
 import { IconicTaxa, Place, SpeciesCount, SpeciesFilters, Taxon } from './inaturalist';
 import { FlashcardRating } from './flashcard-rating';
 import { FlashcardImage } from './flashcard-data';
+import { TaxaScope } from './taxa-scope';
 
 export type Action =
   | { type: 'PLACE_SELECTED'; place: Place }
@@ -10,7 +11,7 @@ export type Action =
       iconicTaxon?: IconicTaxa;
       filters: SpeciesFilters;
     }
-  | { type: 'TAXA_CATEGORY_SELECTED'; taxaCategory: IconicTaxa }
+  | { type: 'TAXA_SCOPE_SELECTED'; taxaScope: TaxaScope }
   | { type: 'ALL_SPECIES_LOADED'; allSpecies: SpeciesCount[] }
   | { type: 'REVEAL_FLASHCARD' }
   | { type: 'REMOVE_FLASHCARD' }

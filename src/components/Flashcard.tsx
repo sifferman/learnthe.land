@@ -25,6 +25,7 @@ import {
 } from 'react-bootstrap-icons';
 import { FlashcardData, FlashcardImage } from '../flashcard-data';
 import { higherRankTaxonOf } from '../flashcard-manager';
+import { HyperlinkButton } from './HyperlinkButton';
 import { FlashcardRating } from '../flashcard-rating';
 import '@egjs/flicking/dist/flicking.css';
 
@@ -513,14 +514,6 @@ const Hyperlinks = ({ species }: { species: SpeciesCount }) => {
     </div>
   ) : (
     <div>{iNaturalistAnchor}</div>
-  );
-};
-
-const HyperlinkButton = ({ href, children }: { href: string; children: React.ReactNode }) => {
-  return (
-    <Button size="sm" variant="outline-secondary" href={href} target="_blank">
-      {children}
-    </Button>
   );
 };
 

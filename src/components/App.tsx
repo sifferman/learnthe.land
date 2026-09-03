@@ -38,7 +38,10 @@ const App = () => {
     inner = (
       <Container className="py-3">
         <SelectTaxaCategoryStep
-          onSelect={(taxaCategory) => dispatch({ type: 'TAXA_CATEGORY_SELECTED', taxaCategory })}
+          place={state.selectedPlace}
+          filters={state.speciesFilters}
+          filtersFromPastedUrl={state.filtersFromPastedUrl}
+          onSelect={(taxaScope) => dispatch({ type: 'TAXA_SCOPE_SELECTED', taxaScope })}
         />
       </Container>
     );

@@ -28,7 +28,7 @@ it('reads the map area, category and filters out of an observation search URL', 
       nelng: -119.301671338,
     },
     iconicTaxon: 'Actinopterygii',
-    filters: { month: [8, 9, 10], introduced: true },
+    filters: { month: [8, 9, 10], introduced: true, taxon_id: 47178 },
   });
 });
 
@@ -64,6 +64,23 @@ it('takes the first place id and the first known iconic taxon of a list', () => 
   );
   expect(parsed.placeId).toBe(1723);
   expect(parsed.iconicTaxon).toBe('Aves');
+  expect(parsed.filters.taxon_id).toBe(3);
+});
+
+// Searching by the category's own taxon avoids iNaturalist reading
+// `iconic_taxa=Animalia` as only the animals outside its other iconic groups.
+it('reads an iconic category as the taxon it stands for', () => {
+  expect(
+    unwrap('https://www.inaturalist.org/observations?place_id=1&iconic_taxa=Animalia').filters
+      .taxon_id,
+  ).toBe(1);
+});
+
+it('keeps an explicit taxon over the one a category stands for', () => {
+  expect(
+    unwrap('https://www.inaturalist.org/observations?place_id=1&iconic_taxa=Aves&taxon_id=52747')
+      .filters.taxon_id,
+  ).toBe(52747);
 });
 
 it('ignores filters it does not understand', () => {

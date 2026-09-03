@@ -50,15 +50,7 @@ export const iNaturalistApi = {
   ) => {
     return iNaturalistApi.apiV1Fetch<SpeciesCount[]>(
       '/v1/observations/species_counts' +
-        queryString({
-          ...(place.searchArea ?? { place_id: place.id }),
-          // Searching by taxon rather than by `iconic_taxa`: iNaturalist reads
-          // `iconic_taxa=Animalia` as only the animals that fall outside its
-          // other iconic groups, where the kingdom itself is what a category
-          // like "Animals" is meant to cover.
-          taxon_id: iconicTaxon && iconicTaxonIds[iconicTaxon],
-          ...filters,
-        }),
+        queryString(speciesSearchParams(place, filters, iconicTaxon)),
     );
   },
 
@@ -149,7 +141,27 @@ export type SpeciesFilters = {
   quality_grade?: QualityGrade;
 } & Partial<Record<BooleanFilterName, boolean>>;
 
-const queryString = (params: object) => {
+/**
+ * The parameters naming a set of species, shared by the API request for them
+ * and by the iNaturalist website URL that shows the same search.
+ *
+ * Categories are searched for by taxon rather than by `iconic_taxa`, which
+ * iNaturalist reads as only those taxa that fall outside its other iconic
+ * groups — `iconic_taxa=Animalia` is a handful of species, where the kingdom
+ * is what a category called "Animals" is meant to cover.
+ */
+export const speciesSearchParams = (
+  place: Place,
+  filters: SpeciesFilters,
+  iconicTaxon?: IconicTaxa,
+) => ({
+  ...(place.searchArea ?? { place_id: place.id }),
+  ...filters,
+  // A chosen category replaces whatever taxon a pasted URL named.
+  taxon_id: iconicTaxon ? iconicTaxonIds[iconicTaxon] : filters.taxon_id,
+});
+
+export const queryString = (params: object) => {
   const pairs = Object.entries(params)
     .filter(([, value]) => value !== undefined)
     .map(([name, value]) => `${name}=${encodeQueryValue(value)}`);

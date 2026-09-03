@@ -7,6 +7,8 @@ export type State<T = LoadedFlashcards | UnloadedFlashcards> = BaseState & T;
 type BaseState = {
   selectedPlace?: Place;
   taxaScope?: TaxaScope;
+  // Whether the filters came from a pasted iNaturalist URL rather than the app.
+  filtersFromPastedUrl: boolean;
   speciesFilters: SpeciesFilters;
   flashcardRevealed: boolean;
   flashcardNotice?: string;
@@ -32,6 +34,7 @@ export const initialState: State = {
   selectedPlace: undefined,
   taxaScope: undefined,
   speciesFilters: defaultSpeciesFilters,
+  filtersFromPastedUrl: false,
   flashcards: undefined,
   flashcardRevealed: false,
   flashcardNotice: undefined,

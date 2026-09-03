@@ -8,10 +8,12 @@ export const SelectionGrid = ({ children }: { children: React.ReactNode }) => {
 export const SelectionGridItem = ({
   header,
   onSelect,
+  secondaryAction,
   children,
 }: {
   header: string;
   onSelect(): void;
+  secondaryAction?: React.ReactNode;
   children?: React.ReactNode;
 }) => {
   return (
@@ -22,6 +24,7 @@ export const SelectionGridItem = ({
           <div className="d-grid gap-3">
             {children}
             <Button onClick={onSelect}>Select</Button>
+            {secondaryAction}
           </div>
         </Card.Body>
       </Card>

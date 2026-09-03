@@ -5,8 +5,11 @@ import {
   BoundingBox,
   IconicTaxa,
   iconicTaxa,
+  iconicTaxonIds,
   iNaturalistApi,
   Place,
+  queryString,
+  speciesSearchParams,
   QualityGrade,
   qualityGrades,
   SearchArea,
@@ -55,6 +58,7 @@ export const parseInaturalistSearchUrl = (enteredUrl: string): ParsedInaturalist
   }
 
   const placeId = parseFirstIntegerInCommaList(url.searchParams.get('place_id'));
+  const iconicTaxon = parseFirstSupportedIconicTaxon(url.searchParams.get('iconic_taxa'));
 
   // iNaturalist keeps the current map view in the URL even when a place is
   // chosen, so the place wins and an area is only used on its own.
@@ -73,11 +77,8 @@ export const parseInaturalistSearchUrl = (enteredUrl: string): ParsedInaturalist
     value: {
       placeId,
       searchArea,
-      // A URL naming a taxon outright has already said which taxa it wants.
-      iconicTaxon: url.searchParams.has('taxon_id')
-        ? undefined
-        : parseFirstSupportedIconicTaxon(url.searchParams.get('iconic_taxa')),
-      filters: parseSpeciesFilters(url.searchParams),
+      iconicTaxon,
+      filters: parseSpeciesFilters(url.searchParams, iconicTaxon),
     },
   };
 };
@@ -100,7 +101,8 @@ export const describeInaturalistSearchUrl = ({
     descriptions.push(iconicTaxon);
   }
 
-  if (filters.taxon_id !== undefined) {
+  // The taxon an iconic category stands for is already named by the category.
+  if (filters.taxon_id !== undefined && filters.taxon_id !== iconicTaxonNamed(iconicTaxon)) {
     descriptions.push(`Taxon #${filters.taxon_id}`);
   }
 
@@ -123,6 +125,15 @@ export const describeInaturalistSearchUrl = ({
 
   return descriptions;
 };
+
+// The iNaturalist page showing the same species this app would learn from.
+export const inaturalistObservationsUrl = (
+  place: Place,
+  filters: SpeciesFilters,
+  iconicTaxon?: IconicTaxa,
+) =>
+  'https://www.inaturalist.org/observations' +
+  queryString({ ...speciesSearchParams(place, filters, iconicTaxon), view: 'species' });
 
 export const resolvePlaceFromSearchUrl = async (
   { placeId, searchArea }: InaturalistSearchUrl,
@@ -190,6 +201,8 @@ const createGeoJsonFeatureForBoundingBox = ({
   },
 });
 
+const iconicTaxonNamed = (iconicTaxon?: IconicTaxa) => iconicTaxon && iconicTaxonIds[iconicTaxon];
+
 const parseSearchArea = (searchParams: URLSearchParams): SearchArea | undefined =>
   parseBoundingBox(searchParams) ?? parseSearchCircle(searchParams);
 
@@ -218,7 +231,10 @@ const parseSearchCircle = (searchParams: URLSearchParams): SearchCircle | undefi
   return { lat, lng, radius };
 };
 
-const parseSpeciesFilters = (searchParams: URLSearchParams): SpeciesFilters => {
+const parseSpeciesFilters = (
+  searchParams: URLSearchParams,
+  iconicTaxon?: IconicTaxa,
+): SpeciesFilters => {
   const filters: SpeciesFilters = {};
 
   const month = parseMonthNumbers(searchParams.get('month'));
@@ -226,7 +242,11 @@ const parseSpeciesFilters = (searchParams: URLSearchParams): SpeciesFilters => {
     filters.month = month;
   }
 
-  const taxonId = parseFirstIntegerInCommaList(searchParams.get('taxon_id'));
+  // Whichever way the URL named its taxa, they end up as one taxon to search
+  // for, which is also the taxon the category step offers to keep.
+  const taxonId =
+    parseFirstIntegerInCommaList(searchParams.get('taxon_id')) ??
+    (iconicTaxon && iconicTaxonIds[iconicTaxon]);
   if (taxonId !== undefined) {
     filters.taxon_id = taxonId;
   }
