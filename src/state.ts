@@ -8,6 +8,7 @@ type BaseState = {
   selectedTaxaCategory?: IconicTaxa;
   speciesFilters: SpeciesFilters;
   flashcardRevealed: boolean;
+  flashcardNotice?: string;
   score: number;
 };
 
@@ -25,5 +26,6 @@ export const initialState: State = {
   speciesFilters: {},
   flashcards: undefined,
   flashcardRevealed: false,
+  flashcardNotice: undefined,
   score: 0,
 };

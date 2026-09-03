@@ -2,7 +2,11 @@ import { State } from './state';
 import { Action } from './Action';
 import { Reducer } from 'react';
 import { FlashcardData } from './flashcard-data';
-import { FlashcardManager } from './flashcard-manager';
+import {
+  describeRestoredFlashcards,
+  FlashcardManager,
+  higherRankTaxonOf,
+} from './flashcard-manager';
 
 export const reducer: Reducer<State, Action> = (state: State, action: Action): State => {
   console.debug('Action dispatched', action);
@@ -39,6 +43,31 @@ export const reducer: Reducer<State, Action> = (state: State, action: Action): S
         ...state,
         flashcardRevealed: true,
       };
+    }
+    case 'REMOVE_FLASHCARD': {
+      if (!state.flashcards) {
+        throw new Error('foo');
+      }
+      state.flashcards.removeCurrentFlashcard();
+      return { ...state, flashcardRevealed: false };
+    }
+    case 'RAISE_FLASHCARD_RANK': {
+      if (!state.flashcards) {
+        throw new Error('foo');
+      }
+      const higherRankTaxon = higherRankTaxonOf(state.flashcards.current);
+      if (!higherRankTaxon) {
+        return state;
+      }
+      const restoredNames = state.flashcards.raiseCurrentFlashcardRank();
+      return {
+        ...state,
+        flashcardRevealed: false,
+        flashcardNotice: describeRestoredFlashcards(restoredNames, higherRankTaxon),
+      };
+    }
+    case 'DISMISS_FLASHCARD_NOTICE': {
+      return { ...state, flashcardNotice: undefined };
     }
     case 'SCORE_FLASHCARD': {
       if (!state.flashcards) {

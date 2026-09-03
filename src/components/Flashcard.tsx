@@ -1,20 +1,30 @@
 import * as React from 'react';
 import { CSSProperties, useRef, useState } from 'react';
-import { iNaturalistApi, SpeciesCount, Taxon } from '../inaturalist';
+import {
+  iNaturalistApi,
+  Place,
+  SpeciesCount,
+  speciesRankLevel,
+  SpeciesFilters,
+  Taxon,
+} from '../inaturalist';
 import Flicking from '@egjs/react-flicking';
 import { Plugin } from '@egjs/react-flicking';
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
-import { ButtonGroup, Col, Container, Navbar, Row } from 'react-bootstrap';
+import { ButtonGroup, Col, Container, Navbar, Row, Toast, ToastContainer } from 'react-bootstrap';
 import { Fade } from '@egjs/flicking-plugins';
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowUpCircle,
   EyeFill,
   HandThumbsUp,
   HandThumbsDown,
+  XCircle,
 } from 'react-bootstrap-icons';
 import { FlashcardData, FlashcardImage } from '../flashcard-data';
+import { higherRankTaxonOf } from '../flashcard-manager';
 import { FlashcardRating } from '../flashcard-rating';
 import '@egjs/flicking/dist/flicking.css';
 
@@ -52,6 +62,48 @@ const FlashcardNextImageButton = ({
   );
 };
 
+// Reshaping the deck: dropping this taxon, or trading it for the taxon above it.
+const FlashcardDeckButtons = ({
+  higherRankTaxon,
+  removeDisabled,
+  disabled,
+  onRemove,
+  onRaiseRank,
+}: {
+  higherRankTaxon?: Taxon;
+  removeDisabled: boolean;
+  disabled: boolean;
+  onRemove: () => void;
+  onRaiseRank: () => void;
+}) => {
+  return (
+    <Row className="w-100 mb-2">
+      <Col xs={6} className="d-grid">
+        <Button
+          size="sm"
+          variant="outline-secondary"
+          disabled={disabled || removeDisabled}
+          onClick={onRemove}
+        >
+          <XCircle />
+          &nbsp;Remove
+        </Button>
+      </Col>
+      <Col xs={6} className="d-grid">
+        <Button
+          size="sm"
+          variant="outline-secondary"
+          disabled={disabled || !higherRankTaxon}
+          onClick={onRaiseRank}
+        >
+          <ArrowUpCircle />
+          &nbsp;Test {higherRankTaxon ? higherRankTaxon.rank : 'higher rank'} instead
+        </Button>
+      </Col>
+    </Row>
+  );
+};
+
 const FlashcardButtons = ({
   revealed,
   onPrevClick,
@@ -60,6 +112,7 @@ const FlashcardButtons = ({
   onRateClick,
   disabled,
   nextPrevDisabled,
+  deckButtons,
 }: {
   revealed: boolean;
   onPrevClick?: () => void;
@@ -68,6 +121,7 @@ const FlashcardButtons = ({
   onRateClick?: (rating: FlashcardRating) => void;
   disabled?: boolean;
   nextPrevDisabled?: boolean;
+  deckButtons: React.JSX.Element;
 }) => {
   let middle;
   if (revealed) {
@@ -108,6 +162,7 @@ const FlashcardButtons = ({
   const nextPrevButtonsDisabled = !!disabled || !!nextPrevDisabled;
   return (
     <Container>
+      {deckButtons}
       <Row className="d-lg-none w-100">
         <Col xs={12} className="d-grid">
           <ButtonGroup>
@@ -143,16 +198,30 @@ export const Flashcard = ({
   offlineMode,
   revealed,
   data,
+  place,
+  filters,
+  notice,
+  removeDisabled,
   onReveal,
   onRateClick,
+  onRemove,
+  onRaiseRank,
+  onDismissNotice,
   onLoadImageMetadata,
   onLoadAncestors,
 }: {
   offlineMode: boolean;
   revealed: boolean;
   data: FlashcardData;
+  place: Place;
+  filters: SpeciesFilters;
+  notice?: string;
+  removeDisabled: boolean;
   onReveal: () => void;
   onRateClick: (rating: FlashcardRating) => void;
+  onRemove: () => void;
+  onRaiseRank: () => void;
+  onDismissNotice: () => void;
   onLoadImageMetadata: (images: FlashcardImage[]) => void;
   onLoadAncestors: (taxon: Taxon[]) => void;
 }) => {
@@ -163,7 +232,7 @@ export const Flashcard = ({
   let speciesFacts;
 
   if (data.images.length === 0) {
-    loadImageMetadata(offlineMode, data.species).then((flashcardImages) => {
+    loadImageMetadata(offlineMode, data.species, place, filters).then((flashcardImages) => {
       onLoadImageMetadata(flashcardImages);
     });
 
@@ -236,6 +305,14 @@ export const Flashcard = ({
         {inner}
         {speciesFacts}
       </div>
+      <ToastContainer position="top-center" className="p-3" style={{ zIndex: 20 }}>
+        <Toast show={notice !== undefined} onClose={onDismissNotice} delay={6000} autohide>
+          <Toast.Header>
+            <strong className="me-auto">Back in play</strong>
+          </Toast.Header>
+          <Toast.Body>{notice}</Toast.Body>
+        </Toast>
+      </ToastContainer>
       <Navbar variant="light" bg="light" className="border-top" expand={false}>
         <FlashcardButtons
           revealed={revealed}
@@ -245,24 +322,68 @@ export const Flashcard = ({
           onRateClick={(rating: FlashcardRating) => onRateClick(rating)}
           onReveal={onReveal}
           nextPrevDisabled={isMoving}
+          deckButtons={
+            <FlashcardDeckButtons
+              higherRankTaxon={higherRankTaxonOf(data)}
+              removeDisabled={removeDisabled}
+              disabled={data.images.length === 0}
+              onRemove={onRemove}
+              onRaiseRank={onRaiseRank}
+            />
+          }
         />
       </Navbar>
     </>
   );
 };
 
+// How many of a coarser taxon's members to show a photo of.
+const memberPhotoCount = 12;
+
 const loadImageMetadata: (
   offlineMode: boolean,
   species: SpeciesCount,
-) => Promise<FlashcardImage[]> = (offlineMode, species) => {
-  const originalPhotoUrl = species.taxon.default_photo.medium_url.replace('medium', 'original');
-  const promises = [loadFlashcardImage(originalPhotoUrl, species.taxon.default_photo.attribution)];
+  place: Place,
+  filters: SpeciesFilters,
+) => Promise<FlashcardImage[]> = (offlineMode, species, place, filters) => {
+  const promises = [loadTaxonDefaultPhoto(species.taxon)];
   if (!offlineMode) {
-    promises.push(loadINaturalistObservationFlashcardImages(species));
+    // Recent observations of a genus are dominated by its commonest species, so
+    // a taxon above species level is shown by one photo per member instead.
+    promises.push(
+      species.taxon.rank_level > speciesRankLevel
+        ? loadMemberFlashcardImages(species.taxon, place, filters)
+        : loadINaturalistObservationFlashcardImages(species),
+    );
   }
   return Promise.all(promises).then((result) => {
     return Array.prototype.concat.apply([], result);
   });
+};
+
+const loadTaxonDefaultPhoto: (taxon: Taxon) => Promise<FlashcardImage[]> = (taxon) => {
+  if (!taxon.default_photo) {
+    return Promise.resolve([]);
+  }
+  const originalPhotoUrl = taxon.default_photo.medium_url.replace('medium', 'original');
+  return loadFlashcardImage(originalPhotoUrl, taxon.default_photo.attribution);
+};
+
+// One photo per member species, so a genus card shows the whole genus rather
+// than a dozen pictures of its commonest member.
+const loadMemberFlashcardImages: (
+  taxon: Taxon,
+  place: Place,
+  filters: SpeciesFilters,
+) => Promise<FlashcardImage[]> = (taxon, place, filters) => {
+  return iNaturalistApi
+    .fetchAllSpeciesForPlace(undefined, place, { ...filters, taxon_id: taxon.id })
+    .then((members) =>
+      Promise.all(
+        members.slice(0, memberPhotoCount).map((member) => loadTaxonDefaultPhoto(member.taxon)),
+      ),
+    )
+    .then((memberImages) => memberImages.flat());
 };
 
 const loadFlashcardImage: (imageSrc: string, attribution: string) => Promise<FlashcardImage[]> = (

@@ -64,7 +64,14 @@ const App = () => {
         offlineMode={OFFLINE_MODE}
         revealed={state.flashcardRevealed}
         data={state.flashcards.current}
+        place={state.selectedPlace}
+        filters={state.speciesFilters}
+        notice={state.flashcardNotice}
+        removeDisabled={state.flashcards.remainingFlashcardCount === 0}
         onReveal={() => dispatch({ type: 'REVEAL_FLASHCARD' })}
+        onRemove={() => dispatch({ type: 'REMOVE_FLASHCARD' })}
+        onRaiseRank={() => dispatch({ type: 'RAISE_FLASHCARD_RANK' })}
+        onDismissNotice={() => dispatch({ type: 'DISMISS_FLASHCARD_NOTICE' })}
         onRateClick={(rating) => dispatch({ type: 'SCORE_FLASHCARD', flashcardRating: rating })}
         onLoadImageMetadata={(images) =>
           dispatch({ type: 'FLASHCARD_IMAGE_METADATA_LOADED', images })

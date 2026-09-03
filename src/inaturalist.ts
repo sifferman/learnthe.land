@@ -106,6 +106,9 @@ export interface SearchCircle {
 // iNaturalist place id of its own.
 export type SearchArea = BoundingBox | SearchCircle;
 
+// Ranks coarser than a species have a higher rank level than this.
+export const speciesRankLevel = 10;
+
 export const qualityGrades = ['research', 'needs_id', 'casual'] as const;
 
 export type QualityGrade = (typeof qualityGrades)[number];
@@ -248,7 +251,7 @@ export type IconicTaxa = (typeof iconicTaxa)[number];
 
 export const iconicTaxaDescription: Record<IconicTaxa, string | null> = {
   Actinopterygii: 'Ray-Finned Fishes',
-  Animalia: 'Animals',
+  Animalia: 'Animals in no category below',
   Amphibia: 'Amphibians',
   Arachnida: 'Arachnids',
   Aves: 'Birds',

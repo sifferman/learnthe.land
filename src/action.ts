@@ -13,6 +13,9 @@ export type Action =
   | { type: 'TAXA_CATEGORY_SELECTED'; taxaCategory: IconicTaxa }
   | { type: 'ALL_SPECIES_LOADED'; allSpecies: SpeciesCount[] }
   | { type: 'REVEAL_FLASHCARD' }
+  | { type: 'REMOVE_FLASHCARD' }
+  | { type: 'RAISE_FLASHCARD_RANK' }
+  | { type: 'DISMISS_FLASHCARD_NOTICE' }
   | { type: 'FLASHCARD_IMAGE_METADATA_LOADED'; images: FlashcardImage[] }
   | { type: 'FLASHCARD_ANCESTORS_LOADED'; ancestors: Taxon[] }
   | { type: 'SCORE_FLASHCARD'; flashcardRating: FlashcardRating };
