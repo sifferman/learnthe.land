@@ -25,6 +25,15 @@ export const reducer: Reducer<State, Action> = (state: State, action: Action): S
         selectedPlace: action.place,
       };
     }
+    case 'INATURALIST_URL_APPLIED': {
+      return {
+        ...state,
+        selectedPlace: action.place,
+        // An undefined category falls through to the taxa category step.
+        selectedTaxaCategory: action.iconicTaxon,
+        speciesFilters: action.filters,
+      };
+    }
     case 'TAXA_CATEGORY_SELECTED': {
       return {
         ...state,

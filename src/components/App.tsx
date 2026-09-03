@@ -16,7 +16,6 @@ import 'leaflet/dist/leaflet.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { TopNavbars } from './TopNavbars';
 import { Container } from 'react-bootstrap';
-import { onSelectTaxaCategory } from '../event-handlers';
 
 const OFFLINE_MODE = false;
 
@@ -51,6 +50,9 @@ const App = () => {
           places={state.places}
           offlineMode={OFFLINE_MODE}
           onSelectPlace={(place) => dispatch({ type: 'PLACE_SELECTED', place })}
+          onApplyInaturalistUrl={(place, iconicTaxon, filters) =>
+            dispatch({ type: 'INATURALIST_URL_APPLIED', place, iconicTaxon, filters })
+          }
         />
       </Container>
     );
@@ -58,14 +60,20 @@ const App = () => {
     inner = (
       <Container className="py-3">
         <SelectTaxaCategoryStep
-          onSelect={onSelectTaxaCategory(state.selectedPlace, OFFLINE_MODE, dispatch)}
+          onSelect={(taxaCategory) => dispatch({ type: 'TAXA_CATEGORY_SELECTED', taxaCategory })}
         />
       </Container>
     );
   } else if (!state.flashcards) {
     inner = (
       <Container className="py-3">
-        <LoadAllSpeciesStep />
+        <LoadAllSpeciesStep
+          offlineMode={OFFLINE_MODE}
+          place={state.selectedPlace}
+          taxaCategory={state.selectedTaxaCategory}
+          filters={state.speciesFilters}
+          onLoad={(allSpecies) => dispatch({ type: 'ALL_SPECIES_LOADED', allSpecies })}
+        />
       </Container>
     );
   } else {

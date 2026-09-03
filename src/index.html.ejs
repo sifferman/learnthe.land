@@ -3,6 +3,15 @@
     <head>
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <!--
+          GitHub Pages serves this page with `Cache-Control: max-age=600`, so a
+          browser can otherwise keep running a ten-minute-old deploy. These ask
+          it to revalidate instead; the bundle itself is content-hashed, so only
+          this page needs it.
+        -->
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Expires" content="0">
         <title>Learn the Land (learnthe.land)</title>
         <link href="https://rwell.org/img/favicon.png" rel="icon" />
         <link rel="stylesheet" href="https://unpkg.com/@egjs/flicking@4.0.0/dist/flicking.css">

@@ -1,5 +1,5 @@
 import { FlashcardManager } from './flashcard-manager';
-import { IconicTaxa, Place } from './inaturalist';
+import { IconicTaxa, Place, SpeciesFilters } from './inaturalist';
 import { Location } from './location';
 
 export type State<T = LoadedFlashcards | UnloadedFlashcards> = BaseState & T;
@@ -9,6 +9,7 @@ type BaseState = {
   places?: Place[];
   selectedPlace?: Place;
   selectedTaxaCategory?: IconicTaxa;
+  speciesFilters: SpeciesFilters;
   flashcardRevealed: boolean;
   score: number;
 };
@@ -26,6 +27,7 @@ export const initialState: State = {
   places: undefined,
   selectedPlace: undefined,
   selectedTaxaCategory: undefined,
+  speciesFilters: {},
   flashcards: undefined,
   flashcardRevealed: false,
   score: 0,

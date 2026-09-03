@@ -36,16 +36,27 @@ export const iNaturalistApi = {
     );
   },
 
+  // Looks a place up by the id iNaturalist uses in its own URLs.
+  fetchPlace: async (placeId: number) => {
+    const places = await iNaturalistApi.apiV1Fetch<Place[]>(`/v1/places/${placeId}`);
+    return places[0];
+  },
+
   // TODO: limit observations to above a certain count? so we get more common species
-  // TODO: filter month?
-  // TODO: parameterize iconic_taxa with an enum
-  fetchAllSpeciesForPlace: async (iconicTaxa: IconicTaxa, place: Place) => {
+  fetchAllSpeciesForPlace: async (
+    iconicTaxa: IconicTaxa,
+    place: Place,
+    filters: SpeciesFilters = {},
+  ) => {
     return iNaturalistApi.apiV1Fetch<SpeciesCount[]>(
       '/v1/observations/species_counts' +
         '?captive=false' +
         '&quality_grade=research' +
-        `&place_id=${place.id}` +
-        `&iconic_taxa=${iconicTaxa}`,
+        // A place pasted as a map rectangle has no id to search by, so its
+        // bounding box goes to iNaturalist instead.
+        (place.boundingBox ? boundingBoxParams(place.boundingBox) : `&place_id=${place.id}`) +
+        `&iconic_taxa=${iconicTaxa}` +
+        speciesFilterParams(filters),
     );
   },
 
@@ -75,6 +86,44 @@ export const iNaturalistApi = {
   },
 };
 
+// A map rectangle, in the corner-per-parameter shape iNaturalist URLs use.
+export interface BoundingBox {
+  swlat: number;
+  swlng: number;
+  nelat: number;
+  nelng: number;
+}
+
+export const establishmentFilterNames = ['introduced', 'native', 'endemic', 'threatened'] as const;
+
+export type EstablishmentFilterName = (typeof establishmentFilterNames)[number];
+
+export const establishmentFilterLabels: Record<EstablishmentFilterName, string> = {
+  introduced: 'Introduced',
+  native: 'Native',
+  endemic: 'Endemic',
+  threatened: 'Threatened',
+};
+
+// These names match the iNaturalist observation-search parameters they become,
+// so a pasted search URL can be replayed here.
+export type SpeciesFilters = {
+  monthsOfTheYear?: number[];
+} & Partial<Record<EstablishmentFilterName, boolean>>;
+
+const boundingBoxParams = ({ swlat, swlng, nelat, nelng }: BoundingBox) =>
+  `&swlat=${swlat}&swlng=${swlng}&nelat=${nelat}&nelng=${nelng}`;
+
+const speciesFilterParams = ({ monthsOfTheYear, ...establishmentFilters }: SpeciesFilters) => {
+  let params = monthsOfTheYear ? `&month=${monthsOfTheYear.join(',')}` : '';
+  for (const [name, value] of Object.entries(establishmentFilters)) {
+    if (value !== undefined) {
+      params += `&${name}=${value}`;
+    }
+  }
+  return params;
+};
+
 export interface Nearby {
   standard: Place[];
   community: unknown;
@@ -85,6 +134,11 @@ export interface Place {
   ancestor_place_ids: null;
   bbox_area: number;
   bounding_box_geojson: { coordinates: unknown[] };
+  /**
+   * Set by this app, not by iNaturalist: present when the place is a stand-in
+   * for a map rectangle rather than a place iNaturalist has an id for.
+   */
+  boundingBox?: BoundingBox;
   display_name: string;
   geometry_geojson?: GeoJsonObject;
   id: number;

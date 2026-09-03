@@ -1,21 +1,32 @@
-import { Place } from '../inaturalist';
+import { IconicTaxa, Place, SpeciesFilters } from '../inaturalist';
 import * as React from 'react';
 import { useState } from 'react';
-import { Form } from 'react-bootstrap';
+import { Button, Form } from 'react-bootstrap';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import { GeoJsonObject } from 'geojson';
 import { SelectionGrid, SelectionGridItem } from './SelectionGrid';
 import { Polyline } from 'leaflet';
 import { usePlaceSearch } from '../use-place-search';
+import {
+  describeInaturalistSearchUrl,
+  parseInaturalistSearchUrl,
+  resolvePlaceFromSearchUrl,
+} from '../inaturalist-url';
 
 export const SelectPlaceStep = ({
   places,
   offlineMode,
   onSelectPlace,
+  onApplyInaturalistUrl,
 }: {
   places: Place[];
   offlineMode: boolean;
   onSelectPlace: (place: Place) => void;
+  onApplyInaturalistUrl: (
+    place: Place,
+    iconicTaxon: IconicTaxa | undefined,
+    filters: SpeciesFilters,
+  ) => void;
 }) => {
   const [query, setQuery] = useState('');
   const search = usePlaceSearch(query, offlineMode);
@@ -88,9 +99,82 @@ export const SelectPlaceStep = ({
         />
         <Form.Text>Leave this empty to pick from the places near you.</Form.Text>
       </Form.Group>
+      <InaturalistSearchUrlForm offlineMode={offlineMode} onApply={onApplyInaturalistUrl} />
       {message && <p>{message}</p>}
       <SelectionGrid>{placesElems}</SelectionGrid>
     </>
+  );
+};
+
+// Skips ahead to the flashcards for a search already built up on iNaturalist,
+// so it does not have to be rebuilt here by hand.
+const InaturalistSearchUrlForm = ({
+  offlineMode,
+  onApply,
+}: {
+  offlineMode: boolean;
+  onApply: (place: Place, iconicTaxon: IconicTaxa | undefined, filters: SpeciesFilters) => void;
+}) => {
+  const [enteredUrl, setEnteredUrl] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
+  const [lookupFailed, setLookupFailed] = useState(false);
+
+  const parsedUrl = enteredUrl.trim() === '' ? null : parseInaturalistSearchUrl(enteredUrl);
+
+  const applyEnteredUrl = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!parsedUrl?.ok || isApplying) {
+      return;
+    }
+    const searchUrl = parsedUrl.value;
+    setIsApplying(true);
+    setLookupFailed(false);
+    resolvePlaceFromSearchUrl(searchUrl, offlineMode)
+      .then((place) => onApply(place, searchUrl.iconicTaxon, searchUrl.filters))
+      .catch((error) => {
+        console.warn('Could not apply iNaturalist search URL', error);
+        setLookupFailed(true);
+        setIsApplying(false);
+      });
+  };
+
+  return (
+    <Form onSubmit={applyEnteredUrl}>
+      <Form.Group className="mb-3" controlId="inaturalist-search-url">
+        <Form.Label>Or paste an iNaturalist search URL</Form.Label>
+        <div className="d-flex gap-2">
+          <Form.Control
+            type="url"
+            value={enteredUrl}
+            placeholder="e.g. https://www.inaturalist.org/observations?place_id=1723&iconic_taxa=Aves"
+            autoComplete="off"
+            onChange={(event) => {
+              setEnteredUrl(event.target.value);
+              setLookupFailed(false);
+            }}
+          />
+          <Button type="submit" disabled={!parsedUrl?.ok || isApplying}>
+            {isApplying ? 'Loading…' : 'Apply'}
+          </Button>
+        </div>
+        <Form.Text>
+          The place or map area, category and month/establishment filters from the URL are used.
+        </Form.Text>
+      </Form.Group>
+      {parsedUrl && !parsedUrl.ok && <p className="text-danger">{parsedUrl.reason}</p>}
+      {parsedUrl?.ok && (
+        <ul>
+          {describeInaturalistSearchUrl(parsedUrl.value).map((description) => (
+            <li key={description}>{description}</li>
+          ))}
+        </ul>
+      )}
+      {lookupFailed && (
+        <p className="text-danger">
+          Could not look up that place on iNaturalist. Please try again.
+        </p>
+      )}
+    </Form>
   );
 };
 
