@@ -22,10 +22,6 @@ const App = () => {
 
   let inner: React.JSX.Element;
 
-  // A pasted URL can name a taxon itself, which leaves nothing to pick here.
-  const taxaCategoryStillNeeded =
-    !state.selectedTaxaCategory && state.speciesFilters.taxon_id === undefined;
-
   if (!state.selectedPlace) {
     inner = (
       <Container className="py-3">
@@ -38,7 +34,7 @@ const App = () => {
         />
       </Container>
     );
-  } else if (taxaCategoryStillNeeded) {
+  } else if (!state.taxaScope) {
     inner = (
       <Container className="py-3">
         <SelectTaxaCategoryStep
@@ -52,7 +48,7 @@ const App = () => {
         <LoadAllSpeciesStep
           offlineMode={OFFLINE_MODE}
           place={state.selectedPlace}
-          taxaCategory={state.selectedTaxaCategory}
+          taxaScope={state.taxaScope}
           filters={state.speciesFilters}
           onLoad={(allSpecies) => dispatch({ type: 'ALL_SPECIES_LOADED', allSpecies })}
         />
@@ -85,7 +81,7 @@ const App = () => {
     <>
       <TopNavbars
         selectedPlace={state.selectedPlace}
-        selectedTaxaCategory={state.selectedTaxaCategory}
+        taxaScope={state.taxaScope}
         score={state.score}
       />
       {inner}

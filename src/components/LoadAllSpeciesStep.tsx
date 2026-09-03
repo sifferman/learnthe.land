@@ -1,17 +1,18 @@
 import * as React from 'react';
-import { IconicTaxa, iNaturalistApi, Place, SpeciesCount, SpeciesFilters } from '../inaturalist';
+import { iNaturalistApi, Place, SpeciesCount, SpeciesFilters } from '../inaturalist';
+import { iconicTaxonOf, TaxaScope } from '../taxa-scope';
 import { fakeSpecies } from '../inaturalist-fake-data';
 
 export const LoadAllSpeciesStep = ({
   offlineMode,
   place,
-  taxaCategory,
+  taxaScope,
   filters,
   onLoad,
 }: {
   offlineMode: boolean;
   place: Place;
-  taxaCategory?: IconicTaxa;
+  taxaScope: TaxaScope;
   filters: SpeciesFilters;
   onLoad: (species: SpeciesCount[]) => void;
 }) => {
@@ -19,7 +20,7 @@ export const LoadAllSpeciesStep = ({
     window.setTimeout(() => onLoad([fakeSpecies]), 300);
     return loading;
   }
-  iNaturalistApi.fetchAllSpeciesForPlace(taxaCategory, place, filters).then(onLoad);
+  iNaturalistApi.fetchAllSpeciesForPlace(iconicTaxonOf(taxaScope), place, filters).then(onLoad);
   return loading;
 };
 

@@ -51,11 +51,8 @@ export const iNaturalistApi = {
     return iNaturalistApi.apiV1Fetch<SpeciesCount[]>(
       '/v1/observations/species_counts' +
         queryString({
-          captive: false,
-          quality_grade: 'research',
           ...(place.searchArea ?? { place_id: place.id }),
           iconic_taxa: iconicTaxon,
-          // Pasted filters come last so a pasted URL can overrule the defaults.
           ...filters,
         }),
     );
@@ -251,7 +248,7 @@ export type IconicTaxa = (typeof iconicTaxa)[number];
 
 export const iconicTaxaDescription: Record<IconicTaxa, string | null> = {
   Actinopterygii: 'Ray-Finned Fishes',
-  Animalia: 'Animals in no category below',
+  Animalia: 'Animals not in another category',
   Amphibia: 'Amphibians',
   Arachnida: 'Arachnids',
   Aves: 'Birds',

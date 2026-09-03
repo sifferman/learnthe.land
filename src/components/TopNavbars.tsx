@@ -1,22 +1,23 @@
 import Container from 'react-bootstrap/Container';
 import Navbar from 'react-bootstrap/Navbar';
 import * as React from 'react';
-import { IconicTaxa, Place } from '../inaturalist';
+import { Place } from '../inaturalist';
+import { describeTaxaScope, TaxaScope } from '../taxa-scope';
 import { Globe } from 'react-bootstrap-icons';
 
 export const TopNavbars = ({
   selectedPlace,
-  selectedTaxaCategory,
+  taxaScope,
   score,
 }: {
   selectedPlace?: Place;
-  selectedTaxaCategory?: IconicTaxa;
+  taxaScope?: TaxaScope;
   score: number;
 }) => {
   let subNavbarTitle: string;
 
-  if (selectedPlace && selectedTaxaCategory) {
-    subNavbarTitle = `${selectedPlace.name} / ${selectedTaxaCategory}`;
+  if (selectedPlace && taxaScope) {
+    subNavbarTitle = `${selectedPlace.name} / ${describeTaxaScope(taxaScope)}`;
   } else if (selectedPlace) {
     subNavbarTitle = selectedPlace.name;
   } else {

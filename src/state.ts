@@ -1,11 +1,12 @@
 import { FlashcardManager } from './flashcard-manager';
-import { IconicTaxa, Place, SpeciesFilters } from './inaturalist';
+import { Place, SpeciesFilters } from './inaturalist';
+import { TaxaScope } from './taxa-scope';
 
 export type State<T = LoadedFlashcards | UnloadedFlashcards> = BaseState & T;
 
 type BaseState = {
   selectedPlace?: Place;
-  selectedTaxaCategory?: IconicTaxa;
+  taxaScope?: TaxaScope;
   speciesFilters: SpeciesFilters;
   flashcardRevealed: boolean;
   flashcardNotice?: string;
@@ -20,10 +21,17 @@ export type LoadedFlashcards = {
   flashcards: FlashcardManager;
 };
 
+// What the app asks iNaturalist for when nobody has pasted a search of their
+// own: identified wild observations, which are the ones worth learning from.
+export const defaultSpeciesFilters: SpeciesFilters = {
+  captive: false,
+  quality_grade: 'research',
+};
+
 export const initialState: State = {
   selectedPlace: undefined,
-  selectedTaxaCategory: undefined,
-  speciesFilters: {},
+  taxaScope: undefined,
+  speciesFilters: defaultSpeciesFilters,
   flashcards: undefined,
   flashcardRevealed: false,
   flashcardNotice: undefined,
