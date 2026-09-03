@@ -24,6 +24,10 @@ const App = () => {
 
   let inner: React.JSX.Element;
 
+  // A pasted URL can name a taxon itself, which leaves nothing to pick here.
+  const taxaCategoryStillNeeded =
+    !state.selectedTaxaCategory && state.speciesFilters.taxon_id === undefined;
+
   if (!state.location) {
     inner = (
       <Container className="py-3">
@@ -56,7 +60,7 @@ const App = () => {
         />
       </Container>
     );
-  } else if (!state.selectedTaxaCategory) {
+  } else if (taxaCategoryStillNeeded) {
     inner = (
       <Container className="py-3">
         <SelectTaxaCategoryStep

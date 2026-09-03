@@ -1,19 +1,23 @@
 import { Feature } from 'geojson';
 import {
+  booleanFilterDescriptions,
+  booleanFilterNames,
   BoundingBox,
   IconicTaxa,
   iconicTaxa,
   iNaturalistApi,
   Place,
+  QualityGrade,
+  qualityGrades,
+  SearchArea,
+  SearchCircle,
   SpeciesFilters,
-  establishmentFilterNames,
-  establishmentFilterLabels,
 } from './inaturalist';
 import { fakePlace } from './inaturalist-fake-data';
 
 export type InaturalistSearchUrl = {
   placeId?: number;
-  boundingBox?: BoundingBox;
+  searchArea?: SearchArea;
   iconicTaxon?: IconicTaxa;
   filters: SpeciesFilters;
 };
@@ -53,14 +57,14 @@ export const parseInaturalistSearchUrl = (enteredUrl: string): ParsedInaturalist
   const placeId = parseFirstIntegerInCommaList(url.searchParams.get('place_id'));
 
   // iNaturalist keeps the current map view in the URL even when a place is
-  // chosen, so the place wins and the rectangle is only used on its own.
-  const boundingBox = placeId === undefined ? parseBoundingBox(url.searchParams) : undefined;
+  // chosen, so the place wins and an area is only used on its own.
+  const searchArea = placeId === undefined ? parseSearchArea(url.searchParams) : undefined;
 
-  if (placeId === undefined && !boundingBox) {
+  if (placeId === undefined && !searchArea) {
     return {
       ok: false,
       reason:
-        'That URL does not include a place or a map area. Zoom to an area or pick a place on iNaturalist first.',
+        'That URL does not include a place, a map area or a radius. Pick a place or zoom to an area on iNaturalist first.',
     };
   }
 
@@ -68,7 +72,7 @@ export const parseInaturalistSearchUrl = (enteredUrl: string): ParsedInaturalist
     ok: true,
     value: {
       placeId,
-      boundingBox,
+      searchArea,
       iconicTaxon: parseFirstSupportedIconicTaxon(url.searchParams.get('iconic_taxa')),
       filters: parseSpeciesFilters(url.searchParams),
     },
@@ -77,7 +81,7 @@ export const parseInaturalistSearchUrl = (enteredUrl: string): ParsedInaturalist
 
 export const describeInaturalistSearchUrl = ({
   placeId,
-  boundingBox,
+  searchArea,
   iconicTaxon,
   filters,
 }: InaturalistSearchUrl): string[] => {
@@ -85,27 +89,32 @@ export const describeInaturalistSearchUrl = ({
 
   if (placeId !== undefined) {
     descriptions.push(`Place #${placeId}`);
-  } else if (boundingBox) {
-    descriptions.push(`Map area ${describeBoundingBox(boundingBox)}`);
+  } else if (searchArea) {
+    descriptions.push(describeSearchArea(searchArea));
   }
 
   if (iconicTaxon) {
     descriptions.push(iconicTaxon);
   }
 
-  if (filters.monthsOfTheYear) {
-    const monthDescriptions = filters.monthsOfTheYear.map(
-      (month) => abbreviatedMonthNames[month - 1],
-    );
+  if (filters.taxon_id !== undefined) {
+    descriptions.push(`Taxon #${filters.taxon_id}`);
+  }
+
+  if (filters.month) {
+    const monthDescriptions = filters.month.map((month) => abbreviatedMonthNames[month - 1]);
     descriptions.push(`Months: ${monthDescriptions.join(', ')}`);
   }
 
-  for (const filterName of establishmentFilterNames) {
-    const label = establishmentFilterLabels[filterName];
-    if (filters[filterName] === true) {
-      descriptions.push(`${label} species only`);
-    } else if (filters[filterName] === false) {
-      descriptions.push(`No ${label.toLowerCase()} species`);
+  if (filters.quality_grade) {
+    descriptions.push(`Quality grade: ${filters.quality_grade.replace('_', ' ')}`);
+  }
+
+  for (const filterName of booleanFilterNames) {
+    const filterValue = filters[filterName];
+    if (filterValue !== undefined) {
+      const { whenTrue, whenFalse } = booleanFilterDescriptions[filterName];
+      descriptions.push(filterValue ? whenTrue : whenFalse);
     }
   }
 
@@ -113,14 +122,14 @@ export const describeInaturalistSearchUrl = ({
 };
 
 export const resolvePlaceFromSearchUrl = async (
-  { placeId, boundingBox }: InaturalistSearchUrl,
+  { placeId, searchArea }: InaturalistSearchUrl,
   offlineMode: boolean,
 ): Promise<Place> => {
   if (placeId === undefined) {
-    if (!boundingBox) {
-      throw new Error('Search URL has neither a place nor a map area');
+    if (!searchArea) {
+      throw new Error('Search URL has neither a place nor an area');
     }
-    return createPlaceForBoundingBox(boundingBox);
+    return createPlaceForSearchArea(searchArea);
   }
 
   if (offlineMode) {
@@ -134,27 +143,24 @@ export const resolvePlaceFromSearchUrl = async (
   return place;
 };
 
-// A place that exists only in this app, standing in for a map rectangle that
+// A place that exists only in this app, standing in for a pasted map area that
 // iNaturalist has no place id for.
-const createPlaceForBoundingBox = (boundingBox: BoundingBox): Place => {
-  const name = `Map area (${describeBoundingBox(boundingBox)})`;
+const createPlaceForSearchArea = (searchArea: SearchArea): Place => {
+  const name = describeSearchArea(searchArea);
 
   return {
     admin_level: 0,
     ancestor_place_ids: null,
     bbox_area: 0,
     bounding_box_geojson: { coordinates: [] },
-    boundingBox,
+    searchArea,
     display_name: name,
-    geometry_geojson: createGeoJsonFeatureForBoundingBox(boundingBox),
+    geometry_geojson: createGeoJsonFeatureForBoundingBox(boundingBoxAround(searchArea)),
     id: 0,
-    location: `${midpoint(boundingBox.swlat, boundingBox.nelat)},${midpoint(
-      boundingBox.swlng,
-      boundingBox.nelng,
-    )}`,
+    location: `${centerOf(searchArea).lat},${centerOf(searchArea).lng}`,
     name,
     place_type: 0,
-    slug: 'map-area',
+    slug: 'pasted-map-area',
     uuid: '',
   };
 };
@@ -181,6 +187,9 @@ const createGeoJsonFeatureForBoundingBox = ({
   },
 });
 
+const parseSearchArea = (searchParams: URLSearchParams): SearchArea | undefined =>
+  parseBoundingBox(searchParams) ?? parseSearchCircle(searchParams);
+
 const parseBoundingBox = (searchParams: URLSearchParams): BoundingBox | undefined => {
   const swlat = parseFiniteNumber(searchParams.get('swlat'));
   const swlng = parseFiniteNumber(searchParams.get('swlng'));
@@ -194,18 +203,40 @@ const parseBoundingBox = (searchParams: URLSearchParams): BoundingBox | undefine
   return { swlat, swlng, nelat, nelng };
 };
 
+const parseSearchCircle = (searchParams: URLSearchParams): SearchCircle | undefined => {
+  const lat = parseFiniteNumber(searchParams.get('lat'));
+  const lng = parseFiniteNumber(searchParams.get('lng'));
+  const radius = parseFiniteNumber(searchParams.get('radius'));
+
+  if (lat === undefined || lng === undefined || radius === undefined) {
+    return undefined;
+  }
+
+  return { lat, lng, radius };
+};
+
 const parseSpeciesFilters = (searchParams: URLSearchParams): SpeciesFilters => {
   const filters: SpeciesFilters = {};
 
-  const monthsOfTheYear = parseMonthNumbers(searchParams.get('month'));
-  if (monthsOfTheYear) {
-    filters.monthsOfTheYear = monthsOfTheYear;
+  const month = parseMonthNumbers(searchParams.get('month'));
+  if (month) {
+    filters.month = month;
   }
 
-  for (const filterName of establishmentFilterNames) {
-    const value = parseBoolean(searchParams.get(filterName));
-    if (value !== undefined) {
-      filters[filterName] = value;
+  const taxonId = parseFirstIntegerInCommaList(searchParams.get('taxon_id'));
+  if (taxonId !== undefined) {
+    filters.taxon_id = taxonId;
+  }
+
+  const qualityGrade = parseQualityGrade(searchParams.get('quality_grade'));
+  if (qualityGrade) {
+    filters.quality_grade = qualityGrade;
+  }
+
+  for (const filterName of booleanFilterNames) {
+    const filterValue = parseBoolean(searchParams.get(filterName));
+    if (filterValue !== undefined) {
+      filters[filterName] = filterValue;
     }
   }
 
@@ -219,6 +250,9 @@ const parseFirstSupportedIconicTaxon = (value: string | null): IconicTaxa | unde
     (iconicTaxa as readonly string[]).includes(entry),
   );
 
+const parseQualityGrade = (value: string | null): QualityGrade | undefined =>
+  qualityGrades.find((qualityGrade) => qualityGrade === value);
+
 const parseMonthNumbers = (value: string | null): number[] | undefined => {
   const months = splitCommaList(value)
     .map(Number)
@@ -231,9 +265,14 @@ const parseFirstIntegerInCommaList = (value: string | null): number | undefined 
   return Number.isInteger(first) ? first : undefined;
 };
 
+// iNaturalist leaves the value off a parameter that is simply on, as in
+// `&introduced&threatened`, and spells the opposite out as `&captive=false`.
 const parseBoolean = (value: string | null): boolean | undefined => {
-  if (value === 'true' || value === 'false') {
-    return value === 'true';
+  if (value === '' || value === 'true') {
+    return true;
+  }
+  if (value === 'false') {
+    return false;
   }
   return undefined;
 };
@@ -246,9 +285,52 @@ const parseFiniteNumber = (value: string | null): number | undefined => {
 const splitCommaList = (value: string | null): string[] =>
   value ? value.split(',').map((entry) => entry.trim()) : [];
 
-const describeBoundingBox = ({ swlat, swlng, nelat, nelng }: BoundingBox) =>
-  `${formatCoordinateDegrees(swlat)}, ${formatCoordinateDegrees(swlng)} to ` +
-  `${formatCoordinateDegrees(nelat)}, ${formatCoordinateDegrees(nelng)}`;
+const describeSearchArea = (searchArea: SearchArea) => {
+  if (isBoundingBox(searchArea)) {
+    const { swlat, swlng, nelat, nelng } = searchArea;
+    return (
+      `Map area ${formatCoordinateDegrees(swlat)}, ${formatCoordinateDegrees(swlng)} to ` +
+      `${formatCoordinateDegrees(nelat)}, ${formatCoordinateDegrees(nelng)}`
+    );
+  }
+  const { lat, lng, radius } = searchArea;
+  return (
+    `Within ${radius.toFixed(1)} km of ` +
+    `${formatCoordinateDegrees(lat)}, ${formatCoordinateDegrees(lng)}`
+  );
+};
+
+const isBoundingBox = (searchArea: SearchArea): searchArea is BoundingBox => 'swlat' in searchArea;
+
+// The map preview draws a rectangle, so a circle is shown as the square around it.
+const boundingBoxAround = (searchArea: SearchArea): BoundingBox => {
+  if (isBoundingBox(searchArea)) {
+    return searchArea;
+  }
+  const { lat, lng, radius } = searchArea;
+  const latitudeSpan = radius / kilometersPerDegreeOfLatitude;
+  const longitudeSpan = latitudeSpan / Math.max(Math.cos(toRadians(lat)), Number.EPSILON);
+  return {
+    swlat: lat - latitudeSpan,
+    swlng: lng - longitudeSpan,
+    nelat: lat + latitudeSpan,
+    nelng: lng + longitudeSpan,
+  };
+};
+
+const centerOf = (searchArea: SearchArea) => {
+  if (!isBoundingBox(searchArea)) {
+    return { lat: searchArea.lat, lng: searchArea.lng };
+  }
+  return {
+    lat: midpoint(searchArea.swlat, searchArea.nelat),
+    lng: midpoint(searchArea.swlng, searchArea.nelng),
+  };
+};
+
+const kilometersPerDegreeOfLatitude = 111.32;
+
+const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
 
 const formatCoordinateDegrees = (degrees: number) => degrees.toFixed(3);
 

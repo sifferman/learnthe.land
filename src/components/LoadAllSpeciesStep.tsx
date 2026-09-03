@@ -11,7 +11,7 @@ export const LoadAllSpeciesStep = ({
 }: {
   offlineMode: boolean;
   place: Place;
-  taxaCategory: IconicTaxa;
+  taxaCategory?: IconicTaxa;
   filters: SpeciesFilters;
   onLoad: (species: SpeciesCount[]) => void;
 }) => {
