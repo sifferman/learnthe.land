@@ -1,7 +1,5 @@
 import * as React from 'react';
 import { useReducer } from 'react';
-import { LocationStep } from './LocationStep';
-import { PlacesStep } from './PlacesStep';
 import { SelectPlaceStep } from './SelectPlaceStep';
 import { SelectTaxaCategoryStep } from './SelectTaxaCategoryStep';
 import { LoadAllSpeciesStep } from './LoadAllSpeciesStep';
@@ -28,30 +26,10 @@ const App = () => {
   const taxaCategoryStillNeeded =
     !state.selectedTaxaCategory && state.speciesFilters.taxon_id === undefined;
 
-  if (!state.location) {
-    inner = (
-      <Container className="py-3">
-        <LocationStep
-          offlineMode={OFFLINE_MODE}
-          onLocation={(location) => dispatch({ type: 'LOCATION_LOADED', location })}
-        />
-      </Container>
-    );
-  } else if (!state.places) {
-    inner = (
-      <Container className="py-3">
-        <PlacesStep
-          offlineMode={OFFLINE_MODE}
-          location={state.location}
-          onLoad={(places) => dispatch({ type: 'PLACES_LOADED', places })}
-        />
-      </Container>
-    );
-  } else if (!state.selectedPlace) {
+  if (!state.selectedPlace) {
     inner = (
       <Container className="py-3">
         <SelectPlaceStep
-          places={state.places}
           offlineMode={OFFLINE_MODE}
           onSelectPlace={(place) => dispatch({ type: 'PLACE_SELECTED', place })}
           onApplyInaturalistUrl={(place, iconicTaxon, filters) =>

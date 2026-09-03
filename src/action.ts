@@ -1,11 +1,8 @@
 import { IconicTaxa, Place, SpeciesCount, SpeciesFilters, Taxon } from './inaturalist';
-import { Location } from './location';
 import { FlashcardRating } from './flashcard-rating';
 import { FlashcardImage } from './flashcard-data';
 
 export type Action =
-  | { type: 'LOCATION_LOADED'; location: Location }
-  | { type: 'PLACES_LOADED'; places: Place[] }
   | { type: 'PLACE_SELECTED'; place: Place }
   | {
       type: 'INATURALIST_URL_APPLIED';

@@ -7,18 +7,6 @@ import { FlashcardManager } from './flashcard-manager';
 export const reducer: Reducer<State, Action> = (state: State, action: Action): State => {
   console.debug('Action dispatched', action);
   switch (action.type) {
-    case 'LOCATION_LOADED': {
-      return {
-        ...state,
-        location: action.location,
-      };
-    }
-    case 'PLACES_LOADED': {
-      return {
-        ...state,
-        places: action.places,
-      };
-    }
     case 'PLACE_SELECTED': {
       return {
         ...state,
