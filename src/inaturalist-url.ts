@@ -57,14 +57,9 @@ export const parseInaturalistSearchUrl = (enteredUrl: string): ParsedInaturalist
     return { ok: false, reason: 'That URL is not an iNaturalist URL.' };
   }
 
-  const placeId = parseFirstIntegerInCommaList(url.searchParams.get('place_id'));
-  const iconicTaxon = parseFirstSupportedIconicTaxon(url.searchParams.get('iconic_taxa'));
+  const searched = parseSearchParams(url.searchParams);
 
-  // iNaturalist keeps the current map view in the URL even when a place is
-  // chosen, so the place wins and an area is only used on its own.
-  const searchArea = placeId === undefined ? parseSearchArea(url.searchParams) : undefined;
-
-  if (placeId === undefined && !searchArea) {
+  if (searched.placeId === undefined && !searched.searchArea) {
     return {
       ok: false,
       reason:
@@ -72,14 +67,22 @@ export const parseInaturalistSearchUrl = (enteredUrl: string): ParsedInaturalist
     };
   }
 
+  return { ok: true, value: searched };
+};
+
+// The search itself, in the parameter names iNaturalist uses. A quiz link
+// shared from this app spells the same search the same way.
+export const parseSearchParams = (searchParams: URLSearchParams): InaturalistSearchUrl => {
+  const placeId = parseFirstIntegerInCommaList(searchParams.get('place_id'));
+  const iconicTaxon = parseFirstSupportedIconicTaxon(searchParams.get('iconic_taxa'));
+
   return {
-    ok: true,
-    value: {
-      placeId,
-      searchArea,
-      iconicTaxon,
-      filters: parseSpeciesFilters(url.searchParams, iconicTaxon),
-    },
+    placeId,
+    // iNaturalist keeps the current map view in the URL even when a place is
+    // chosen, so the place wins and an area is only used on its own.
+    searchArea: placeId === undefined ? parseSearchArea(searchParams) : undefined,
+    iconicTaxon,
+    filters: parseSpeciesFilters(searchParams, iconicTaxon),
   };
 };
 

@@ -21,11 +21,15 @@ import {
   EyeFill,
   HandThumbsUp,
   HandThumbsDown,
+  Share,
   XCircle,
 } from 'react-bootstrap-icons';
 import { FlashcardData, FlashcardImage } from '../flashcard-data';
 import { higherRankTaxonOf } from '../flashcard-manager';
 import { HyperlinkButton } from './HyperlinkButton';
+import { EditableCommonName } from './EditableCommonName';
+import { commonNameOf } from '../common-name';
+import { CommonNameOverrides } from '../quiz-link';
 import { FlashcardRating } from '../flashcard-rating';
 import '@egjs/flicking/dist/flicking.css';
 
@@ -70,16 +74,18 @@ const FlashcardDeckButtons = ({
   disabled,
   onRemove,
   onRaiseRank,
+  onShareQuiz,
 }: {
   higherRankTaxon?: Taxon;
   removeDisabled: boolean;
   disabled: boolean;
   onRemove: () => void;
   onRaiseRank: () => void;
+  onShareQuiz: () => void;
 }) => {
   return (
     <Row className="w-100 mb-2">
-      <Col xs={6} className="d-grid">
+      <Col xs={4} className="d-grid">
         <Button
           size="sm"
           variant="outline-secondary"
@@ -90,7 +96,7 @@ const FlashcardDeckButtons = ({
           &nbsp;Remove
         </Button>
       </Col>
-      <Col xs={6} className="d-grid">
+      <Col xs={4} className="d-grid">
         <Button
           size="sm"
           variant="outline-secondary"
@@ -99,6 +105,12 @@ const FlashcardDeckButtons = ({
         >
           <ArrowUpCircle />
           &nbsp;Test {higherRankTaxon ? higherRankTaxon.rank : 'higher rank'} instead
+        </Button>
+      </Col>
+      <Col xs={4} className="d-grid">
+        <Button size="sm" variant="outline-secondary" onClick={onShareQuiz}>
+          <Share />
+          &nbsp;Share quiz
         </Button>
       </Col>
     </Row>
@@ -203,10 +215,13 @@ export const Flashcard = ({
   filters,
   notice,
   removeDisabled,
+  commonNameOverrides,
   onReveal,
   onRateClick,
   onRemove,
   onRaiseRank,
+  onShareQuiz,
+  onEditCommonName,
   onDismissNotice,
   onLoadImageMetadata,
   onLoadAncestors,
@@ -218,10 +233,13 @@ export const Flashcard = ({
   filters: SpeciesFilters;
   notice?: string;
   removeDisabled: boolean;
+  commonNameOverrides: CommonNameOverrides;
   onReveal: () => void;
   onRateClick: (rating: FlashcardRating) => void;
   onRemove: () => void;
   onRaiseRank: () => void;
+  onShareQuiz: () => void;
+  onEditCommonName: (taxonId: number, commonName: string) => void;
   onDismissNotice: () => void;
   onLoadImageMetadata: (images: FlashcardImage[]) => void;
   onLoadAncestors: (taxon: Taxon[]) => void;
@@ -296,7 +314,12 @@ export const Flashcard = ({
     );
 
     speciesFacts = revealed ? (
-      <SpeciesFacts species={data.species} ancestors={data.ancestors} />
+      <SpeciesFacts
+        species={data.species}
+        ancestors={data.ancestors}
+        commonNameOverrides={commonNameOverrides}
+        onEditCommonName={onEditCommonName}
+      />
     ) : null;
   }
 
@@ -330,6 +353,7 @@ export const Flashcard = ({
               disabled={data.images.length === 0}
               onRemove={onRemove}
               onRaiseRank={onRaiseRank}
+              onShareQuiz={onShareQuiz}
             />
           }
         />
@@ -428,7 +452,17 @@ const loadINaturalistObservationFlashcardImages: (
   });
 };
 
-const SpeciesFacts = ({ species, ancestors }: { species: SpeciesCount; ancestors: Taxon[] }) => {
+const SpeciesFacts = ({
+  species,
+  ancestors,
+  commonNameOverrides,
+  onEditCommonName,
+}: {
+  species: SpeciesCount;
+  ancestors: Taxon[];
+  commonNameOverrides: CommonNameOverrides;
+  onEditCommonName: (taxonId: number, commonName: string) => void;
+}) => {
   return (
     <Card
       style={{
@@ -445,7 +479,11 @@ const SpeciesFacts = ({ species, ancestors }: { species: SpeciesCount; ancestors
         <Row>
           <Col>
             <div className="d-grid gap-3">
-              <SpeciesName species={species} />
+              <SpeciesName
+                species={species}
+                commonNameOverrides={commonNameOverrides}
+                onEditCommonName={onEditCommonName}
+              />
               <Hyperlinks species={species} />
             </div>
           </Col>
@@ -479,22 +517,29 @@ const TaxonAncestors = ({ ancestors }: { ancestors: Taxon[] }) => {
   return <ul>{rows}</ul>;
 };
 
-const SpeciesName = ({ species }: { species: SpeciesCount }) => {
+const SpeciesName = ({
+  species,
+  commonNameOverrides,
+  onEditCommonName,
+}: {
+  species: SpeciesCount;
+  commonNameOverrides: CommonNameOverrides;
+  onEditCommonName: (taxonId: number, commonName: string) => void;
+}) => {
   const taxonName = <em>{capitalizeFirstLetter(species.taxon.name)}</em>;
-  if (species.taxon.preferred_common_name) {
-    return (
-      <>
-        <div>{capitalizeFirstLetter(species.taxon.preferred_common_name)}</div>
-        <div className="text-secondary">({taxonName})</div>
-      </>
-    );
-  } else {
-    return (
-      <>
-        <div>{taxonName}</div>
-      </>
-    );
-  }
+  const commonName = commonNameOf(species.taxon, commonNameOverrides);
+
+  return (
+    <>
+      <EditableCommonName
+        commonName={commonName ? capitalizeFirstLetter(commonName) : ''}
+        onEdit={(editedName) => onEditCommonName(species.taxon.id, editedName)}
+      />
+      <div className={commonName ? 'text-secondary' : undefined}>
+        {commonName ? <>({taxonName})</> : taxonName}
+      </div>
+    </>
+  );
 };
 
 const FLASHCARD_IMAGE_HEIGHT = 400;

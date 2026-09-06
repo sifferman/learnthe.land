@@ -1,6 +1,7 @@
 import { FlashcardManager } from './flashcard-manager';
 import { Place, SpeciesFilters } from './inaturalist';
 import { TaxaScope } from './taxa-scope';
+import { CommonNameOverrides, SharedQuiz } from './quiz-link';
 
 export type State<T = LoadedFlashcards | UnloadedFlashcards> = BaseState & T;
 
@@ -9,6 +10,9 @@ type BaseState = {
   taxaScope?: TaxaScope;
   // Whether the filters came from a pasted iNaturalist URL rather than the app.
   filtersFromPastedUrl: boolean;
+  commonNameOverrides: CommonNameOverrides;
+  // The quiz this app was opened with, whose deck is restored once it loads.
+  sharedQuiz?: SharedQuiz;
   speciesFilters: SpeciesFilters;
   flashcardRevealed: boolean;
   flashcardNotice?: string;
@@ -35,6 +39,8 @@ export const initialState: State = {
   taxaScope: undefined,
   speciesFilters: defaultSpeciesFilters,
   filtersFromPastedUrl: false,
+  commonNameOverrides: {},
+  sharedQuiz: undefined,
   flashcards: undefined,
   flashcardRevealed: false,
   flashcardNotice: undefined,

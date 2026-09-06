@@ -9,6 +9,8 @@ export class FlashcardManager {
   inRotation: FlashcardData[];
   notInRotation: FlashcardData[];
   removed: FlashcardData[];
+  // The taxa being tested in place of everything they contain.
+  raisedTaxa: Taxon[];
   current: FlashcardData;
 
   constructor(allSpecies: SpeciesCount[]) {
@@ -17,6 +19,7 @@ export class FlashcardManager {
     this.inRotation = inRotation;
     this.notInRotation = notInRotation;
     this.removed = [];
+    this.raisedTaxa = [];
     this.current = popRandom(inRotation);
   }
 
@@ -30,33 +33,70 @@ export class FlashcardManager {
     this.loadNextFlashcard();
   }
 
+  get removedTaxonIds() {
+    return this.removed.map((flashcard) => flashcard.species.taxon.id);
+  }
+
   /**
    * Replaces the current flashcard with one for the taxon that contains it, so a
-   * species becomes its genus and a genus becomes its family. Every flashcard
-   * the new one now covers is folded into it, and the names of the covered
-   * flashcards that had been removed are returned so they can be reported.
+   * species becomes its genus and a genus becomes its family. Returns the taxa
+   * of any removed flashcards the new one now covers, which are back in play.
    */
-  raiseCurrentFlashcardRank(): string[] {
+  raiseCurrentFlashcardRank(): Taxon[] {
     const higherRankTaxon = higherRankTaxonOf(this.current);
     if (!higherRankTaxon) {
       return [];
     }
+    return this.raiseToTaxon(higherRankTaxon, this.current.ancestors?.slice(0, -1));
+  }
 
+  /**
+   * Tests one taxon in place of everything it contains, folding every flashcard
+   * it covers into a single new one. Replaying a shared quiz uses this too,
+   * which is why it does not assume the covered flashcard is the current one.
+   */
+  raiseToTaxon(higherRankTaxon: Taxon, ancestors?: Taxon[]): Taxon[] {
     const covered = (flashcard: FlashcardData) => coversTaxon(higherRankTaxon, flashcard);
-    const restoredNames = this.removed.filter(covered).map(flashcardName);
+    const restoredTaxa = this.removed.filter(covered).map((flashcard) => flashcard.species.taxon);
+    const replacesCurrent = covered(this.current);
 
     this.removed = this.removed.filter((flashcard) => !covered(flashcard));
     this.inRotation = this.inRotation.filter((flashcard) => !covered(flashcard));
     this.notInRotation = this.notInRotation.filter((flashcard) => !covered(flashcard));
-    this.current = {
+    this.raisedTaxa = this.raisedTaxa
+      .filter((taxon) => !coversTaxonId(higherRankTaxon, taxon))
+      .concat(higherRankTaxon);
+
+    const raisedFlashcard = {
       species: { count: higherRankTaxon.observations_count, taxon: higherRankTaxon },
       streak: 0,
       attempts: 0,
       images: [],
-      ancestors: this.current.ancestors?.slice(0, -1),
+      ancestors,
     };
 
-    return restoredNames;
+    if (replacesCurrent) {
+      this.current = raisedFlashcard;
+    } else {
+      this.inRotation.unshift(raisedFlashcard);
+    }
+
+    return restoredTaxa;
+  }
+
+  // Sets aside every flashcard for the given taxa, as a shared quiz records.
+  removeTaxa(taxonIds: number[]) {
+    const removed = (flashcard: FlashcardData) => taxonIds.includes(flashcard.species.taxon.id);
+    this.removed = this.removed.concat(
+      this.inRotation.filter(removed),
+      this.notInRotation.filter(removed),
+    );
+    this.inRotation = this.inRotation.filter((flashcard) => !removed(flashcard));
+    this.notInRotation = this.notInRotation.filter((flashcard) => !removed(flashcard));
+    if (removed(this.current)) {
+      this.removed.push(this.current);
+      this.loadNextFlashcard();
+    }
   }
 
   // TODO: explain the magic numbers in this function
@@ -113,17 +153,16 @@ export const describeRestoredFlashcards = (restoredNames: string[], higherRankTa
   );
 };
 
+const coversTaxonId = (higherRankTaxon: Taxon, taxon: Taxon) =>
+  taxon.id === higherRankTaxon.id || taxon.ancestor_ids.includes(higherRankTaxon.id);
+
 const joinNames = (names: string[]) =>
   names.length <= 2
     ? names.join(' and ')
     : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 
-const flashcardName = ({ species }: FlashcardData) =>
-  species.taxon.preferred_common_name ?? species.taxon.name;
-
 const coversTaxon = (higherRankTaxon: Taxon, { species }: FlashcardData) =>
-  species.taxon.id === higherRankTaxon.id ||
-  species.taxon.ancestor_ids.includes(higherRankTaxon.id);
+  coversTaxonId(higherRankTaxon, species.taxon);
 
 const addNewFlashcard = (
   flashcardsInRotation: FlashcardData[],

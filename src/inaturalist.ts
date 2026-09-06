@@ -42,6 +42,13 @@ export const iNaturalistApi = {
     return places[0];
   },
 
+  fetchTaxa: async (taxonIds: number[]) => {
+    if (taxonIds.length === 0) {
+      return [];
+    }
+    return iNaturalistApi.apiV1Fetch<Taxon[]>(`/v1/taxa/${taxonIds.join(',')}`);
+  },
+
   // TODO: limit observations to above a certain count? so we get more common species
   fetchAllSpeciesForPlace: async (
     iconicTaxon: IconicTaxa | undefined,
@@ -76,7 +83,7 @@ export const iNaturalistApi = {
     // Don't include 'Life' in the results, which is the first entry
     taxonIds.shift();
 
-    return iNaturalistApi.apiV1Fetch<Taxon[]>(`/v1/taxa/${taxonIds.join(',')}`);
+    return iNaturalistApi.fetchTaxa(taxonIds);
   },
 };
 

@@ -86,8 +86,28 @@ it('reports the removed members that a higher rank brings back', () => {
   const removedName = flashcards.current.species.taxon.name;
   flashcards.removeCurrentFlashcard();
 
-  expect(flashcards.raiseCurrentFlashcardRank()).toEqual([removedName]);
+  expect(flashcards.raiseCurrentFlashcardRank().map((taxon) => taxon.name)).toEqual([removedName]);
   expect(flashcards.removed).toEqual([]);
+});
+
+// Replaying a shared quiz reshapes a freshly loaded deck the same way the
+// quizzer reshaped theirs.
+it('replays the removals and raised ranks a shared quiz records', () => {
+  const flashcards = managerWithLoadedAncestors([
+    speciesInGenus(11, 'Bufo bufo'),
+    speciesInGenus(12, 'Bufo japonicus'),
+    { ...fakeSpecies, taxon: taxonAt(13, 'species', 'Rana temporaria', [1, 200, 13]) },
+  ]);
+
+  flashcards.raiseToTaxon(genus);
+  flashcards.removeTaxa([13]);
+
+  const testedTaxonNames = [flashcards.current, ...flashcards.inRotation].map(
+    (flashcard) => flashcard.species.taxon.name,
+  );
+  expect(testedTaxonNames).toEqual(['Bufo']);
+  expect(flashcards.raisedTaxa.map((taxon) => taxon.id)).toEqual([genus.id]);
+  expect(flashcards.removedTaxonIds).toEqual([13]);
 });
 
 it('leaves a flashcard alone when it has no taxon above it', () => {

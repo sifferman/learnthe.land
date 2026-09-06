@@ -1,4 +1,5 @@
 import { State } from './state';
+import { displayNameOf } from './common-name';
 import { Action } from './Action';
 import { Reducer } from 'react';
 import { FlashcardData } from './flashcard-data';
@@ -34,10 +35,38 @@ export const reducer: Reducer<State, Action> = (state: State, action: Action): S
       };
     }
     case 'ALL_SPECIES_LOADED': {
+      const flashcards = new FlashcardManager(action.allSpecies);
+      // A shared quiz reshaped its deck before it was shared, so the same
+      // changes are replayed onto the freshly loaded species.
+      for (const raisedTaxon of action.raisedTaxa) {
+        flashcards.raiseToTaxon(raisedTaxon);
+      }
+      if (state.sharedQuiz) {
+        flashcards.removeTaxa(state.sharedQuiz.removedTaxonIds);
+      }
+      return { ...state, flashcards };
+    }
+    case 'SHARED_QUIZ_OPENED': {
       return {
         ...state,
-        flashcards: new FlashcardManager(action.allSpecies),
+        selectedPlace: action.place,
+        taxaScope: action.quiz.taxaScope,
+        speciesFilters: action.quiz.filters,
+        commonNameOverrides: action.quiz.commonNameOverrides,
       };
+    }
+    case 'COMMON_NAME_EDITED': {
+      const commonNameOverrides = { ...state.commonNameOverrides };
+      // Clearing the box restores whatever iNaturalist calls the taxon.
+      if (action.commonName.trim() === '') {
+        delete commonNameOverrides[action.taxonId];
+      } else {
+        commonNameOverrides[action.taxonId] = action.commonName;
+      }
+      return { ...state, commonNameOverrides };
+    }
+    case 'QUIZ_LINK_COPIED': {
+      return { ...state, flashcardNotice: 'Quiz link copied to the clipboard.' };
     }
     case 'REVEAL_FLASHCARD': {
       return {
@@ -60,11 +89,14 @@ export const reducer: Reducer<State, Action> = (state: State, action: Action): S
       if (!higherRankTaxon) {
         return state;
       }
-      const restoredNames = state.flashcards.raiseCurrentFlashcardRank();
+      const restoredTaxa = state.flashcards.raiseCurrentFlashcardRank();
       return {
         ...state,
         flashcardRevealed: false,
-        flashcardNotice: describeRestoredFlashcards(restoredNames, higherRankTaxon),
+        flashcardNotice: describeRestoredFlashcards(
+          restoredTaxa.map((taxon) => displayNameOf(taxon, state.commonNameOverrides)),
+          higherRankTaxon,
+        ),
       };
     }
     case 'DISMISS_FLASHCARD_NOTICE': {

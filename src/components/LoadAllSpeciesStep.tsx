@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { iNaturalistApi, Place, SpeciesCount, SpeciesFilters } from '../inaturalist';
+import { iNaturalistApi, Place, SpeciesCount, SpeciesFilters, Taxon } from '../inaturalist';
 import { iconicTaxonOf, TaxaScope } from '../taxa-scope';
 import { fakeSpecies } from '../inaturalist-fake-data';
 
@@ -8,19 +8,25 @@ export const LoadAllSpeciesStep = ({
   place,
   taxaScope,
   filters,
+  raisedTaxonIds,
   onLoad,
 }: {
   offlineMode: boolean;
   place: Place;
   taxaScope: TaxaScope;
   filters: SpeciesFilters;
-  onLoad: (species: SpeciesCount[]) => void;
+  // Taxa a shared quiz is testing in place of everything they contain.
+  raisedTaxonIds: number[];
+  onLoad: (species: SpeciesCount[], raisedTaxa: Taxon[]) => void;
 }) => {
   if (offlineMode) {
-    window.setTimeout(() => onLoad([fakeSpecies]), 300);
+    window.setTimeout(() => onLoad([fakeSpecies], []), 300);
     return loading;
   }
-  iNaturalistApi.fetchAllSpeciesForPlace(iconicTaxonOf(taxaScope), place, filters).then(onLoad);
+  Promise.all([
+    iNaturalistApi.fetchAllSpeciesForPlace(iconicTaxonOf(taxaScope), place, filters),
+    iNaturalistApi.fetchTaxa(raisedTaxonIds),
+  ]).then(([species, raisedTaxa]) => onLoad(species, raisedTaxa));
   return loading;
 };
 
